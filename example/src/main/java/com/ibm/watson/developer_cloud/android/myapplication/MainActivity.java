@@ -49,9 +49,16 @@ import com.ibm.watson.speech_to_text.v1.websocket.BaseRecognizeCallback;
 import com.ibm.watson.speech_to_text.v1.websocket.RecognizeCallback;
 import com.ibm.watson.text_to_speech.v1.TextToSpeech;
 import com.ibm.watson.text_to_speech.v1.model.SynthesizeOptions;
+import com.ibm.watson.tone_analyzer.v3.ToneAnalyzer;
+import com.ibm.watson.tone_analyzer.v3.model.ToneAnalysis;
+import com.ibm.watson.tone_analyzer.v3.model.ToneOptions;
+import com.ibm.watson.tone_analyzer.v3.model.ToneScore;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.List;
+
+import javax.xml.transform.Source;
 
 public class MainActivity extends AppCompatActivity {
   private final String TAG = "MainActivity";
@@ -61,17 +68,18 @@ public class MainActivity extends AppCompatActivity {
   private Button translate;
   private ImageButton play;
   private TextView translatedText;
-  private ImageView loadedImage;
+  private TextView toneText;
 
   private SpeechToText speechService;
   private TextToSpeech textService;
   private LanguageTranslator translationService;
+  private ToneAnalyzer toneService;
+  private ToneAnalysis tone;
   private String selectedTargetLanguage = Language.SPANISH;
+  private String selectedSourceLanguage = Language.ENGLISH;
 
   private StreamPlayer player = new StreamPlayer();
 
-  private CameraHelper cameraHelper;
-  private GalleryHelper galleryHelper;
   private MicrophoneHelper microphoneHelper;
 
   private MicrophoneInputStream capture;
@@ -87,23 +95,22 @@ public class MainActivity extends AppCompatActivity {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
 
-    cameraHelper = new CameraHelper(this);
-    galleryHelper = new GalleryHelper(this);
     microphoneHelper = new MicrophoneHelper(this);
 
     speechService = initSpeechToTextService();
     textService = initTextToSpeechService();
     translationService = initLanguageTranslatorService();
+    toneService = initToneService();
 
-    RadioGroup targetLanguage = findViewById(R.id.target_language);
+    final RadioGroup targetLanguage = findViewById(R.id.target_language);
+    final RadioGroup sourceLanguage = findViewById(R.id.source_language);
     input = findViewById(R.id.input);
     mic = findViewById(R.id.mic);
     translate = findViewById(R.id.translate);
     play = findViewById(R.id.play);
     translatedText = findViewById(R.id.translated_text);
-    Button gallery = findViewById(R.id.gallery_button);
-    Button camera = findViewById(R.id.camera_button);
-    loadedImage = findViewById(R.id.loaded_image);
+    toneText = findViewById((R.id.tone));
+
 
     targetLanguage.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
       @Override
@@ -111,12 +118,61 @@ public class MainActivity extends AppCompatActivity {
         switch (checkedId) {
           case R.id.spanish:
             selectedTargetLanguage = Language.SPANISH;
+            if (sourceLanguage.getCheckedRadioButtonId() == R.id.spanish_source){
+              targetLanguage.clearCheck();
+            }
             break;
           case R.id.french:
             selectedTargetLanguage = Language.FRENCH;
+            if (sourceLanguage.getCheckedRadioButtonId() == R.id.french_source){
+              targetLanguage.clearCheck();
+            }
             break;
           case R.id.italian:
             selectedTargetLanguage = Language.ITALIAN;
+            if (sourceLanguage.getCheckedRadioButtonId() == R.id.italian_source){
+              targetLanguage.clearCheck();
+            }
+            break;
+          case R.id.english:
+            selectedTargetLanguage = Language.ENGLISH;
+            if (sourceLanguage.getCheckedRadioButtonId() == R.id.english_source){
+              targetLanguage.clearCheck();
+            }
+            break;
+        }
+      }
+    });
+
+    sourceLanguage.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
+      @Override
+      public void onCheckedChanged(RadioGroup group, int checkedId) {
+        switch (checkedId) {
+          case R.id.spanish_source:
+            selectedSourceLanguage = Language.SPANISH;
+            if (targetLanguage.getCheckedRadioButtonId() == R.id.spanish) {
+              sourceLanguage.clearCheck();
+            }
+            break;
+          case R.id.french_source:
+            selectedSourceLanguage = Language.FRENCH;
+            if (targetLanguage.getCheckedRadioButtonId() == R.id.french){
+              sourceLanguage.clearCheck();
+            }
+            break;
+          case R.id.italian_source:
+            selectedSourceLanguage = Language.ITALIAN;
+            if (targetLanguage.getCheckedRadioButtonId() == R.id.italian){
+              sourceLanguage.clearCheck();
+            }
+
+            break;
+          case R.id.english_source:
+            selectedSourceLanguage = Language.ENGLISH;
+
+            if (targetLanguage.getCheckedRadioButtonId() == R.id.english){
+              sourceLanguage.clearCheck();
+            }
             break;
         }
       }
@@ -177,6 +233,18 @@ public class MainActivity extends AppCompatActivity {
       @Override
       public void onClick(View v) {
         new TranslationTask().execute(input.getText().toString());
+        // Call the service and get the tone
+//        ToneOptions toneOptions = new ToneOptions.Builder()
+//                .text(input.getText().toString())
+//                .build();
+//
+//        final ToneAnalysis tone = toneService.tone(toneOptions).execute().getResult();
+//        runOnUiThread(new Runnable() {
+//          @Override
+//          public void run() {
+//            translatedText.setText(tone.toString());
+//          }
+//        });
       }
     });
 
@@ -199,20 +267,6 @@ public class MainActivity extends AppCompatActivity {
         new SynthesisTask().execute(translatedText.getText().toString());
       }
     });
-
-    gallery.setOnClickListener(new View.OnClickListener() {
-      @Override
-      public void onClick(View v) {
-        galleryHelper.dispatchGalleryIntent();
-      }
-    });
-
-    camera.setOnClickListener(new View.OnClickListener() {
-      @Override
-      public void onClick(View v) {
-        cameraHelper.dispatchTakePictureIntent();
-      }
-    });
   }
 
 
@@ -221,6 +275,33 @@ public class MainActivity extends AppCompatActivity {
       @Override
       public void run() {
         translatedText.setText(translation);
+      }
+    });
+
+    ToneOptions toneOptions = new ToneOptions.Builder()
+            .text(input.getText().toString())
+            .build();
+
+    final ToneAnalysis tone = toneService.tone(toneOptions).execute().getResult();
+
+    List<ToneScore> scores = tone.getDocumentTone()
+            .getTones();
+
+    String detectedTones = "";
+    for(ToneScore score:scores) {
+      if(score.getScore() > 0.5f) {
+        detectedTones += score.getToneName() + " ";
+      }
+    }
+
+    final String tonemessage =
+            "The following emotions were detected:\n\n"
+                    + detectedTones.toUpperCase();
+
+    runOnUiThread(new Runnable() {
+      @Override
+      public void run() {
+        toneText.setText(tonemessage);
       }
     });
   }
@@ -266,6 +347,13 @@ public class MainActivity extends AppCompatActivity {
     Authenticator authenticator = new IamAuthenticator(getString(R.string.text_speech_apikey));
     TextToSpeech service = new TextToSpeech(authenticator);
     service.setServiceUrl(getString(R.string.text_speech_url));
+    return service;
+  }
+
+  private ToneAnalyzer initToneService() {
+    Authenticator authenticator = new IamAuthenticator(getString(R.string.tone_apikey));
+    ToneAnalyzer service = new ToneAnalyzer("2020-05-30", authenticator);
+    service.setServiceUrl(getString(R.string.tone_url));
     return service;
   }
 
@@ -345,7 +433,7 @@ public class MainActivity extends AppCompatActivity {
     protected String doInBackground(String... params) {
       TranslateOptions translateOptions = new TranslateOptions.Builder()
               .addText(params[0])
-              .source(Language.ENGLISH)
+              .source(selectedSourceLanguage)
               .target(selectedTargetLanguage)
               .build();
       TranslationResult result
@@ -359,9 +447,27 @@ public class MainActivity extends AppCompatActivity {
   private class SynthesisTask extends AsyncTask<String, Void, String> {
     @Override
     protected String doInBackground(String... params) {
+
+      String v = null;
+
+      if (selectedTargetLanguage == Language.FRENCH){
+        v = SynthesizeOptions.Voice.FR_FR_RENEEV3VOICE;
+      }
+
+      else if (selectedTargetLanguage == Language.SPANISH){
+        v = SynthesizeOptions.Voice.ES_ES_ENRIQUEV3VOICE;
+      }
+
+      else if (selectedTargetLanguage == Language.ITALIAN){
+        v = SynthesizeOptions.Voice.IT_IT_FRANCESCAV3VOICE;
+      }
+      else {
+        v = SynthesizeOptions.Voice.EN_US_LISAVOICE;
+      }
+
       SynthesizeOptions synthesizeOptions = new SynthesizeOptions.Builder()
               .text(params[0])
-              .voice(SynthesizeOptions.Voice.EN_US_LISAVOICE)
+              .voice(v)
               .accept(HttpMediaType.AUDIO_WAV)
               .build();
       player.playStream(textService.synthesize(synthesizeOptions).execute().getResult());
@@ -381,12 +487,6 @@ public class MainActivity extends AppCompatActivity {
                                          String[] permissions,
                                          int[] grantResults) {
     switch (requestCode) {
-      case CameraHelper.REQUEST_PERMISSION: {
-        // permission granted
-        if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-          cameraHelper.dispatchTakePictureIntent();
-        }
-      }
       case MicrophoneHelper.REQUEST_PERMISSION: {
         if (grantResults.length > 0 && grantResults[0] != PackageManager.PERMISSION_GRANTED) {
           Toast.makeText(this, "Permission to record audio denied", Toast.LENGTH_SHORT).show();
@@ -395,23 +495,4 @@ public class MainActivity extends AppCompatActivity {
     }
   }
 
-  /**
-   * On activity result.
-   *
-   * @param requestCode the request code
-   * @param resultCode the result code
-   * @param data the data
-   */
-  @Override
-  protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-    super.onActivityResult(requestCode, resultCode, data);
-
-    if (requestCode == CameraHelper.REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
-      loadedImage.setImageBitmap(cameraHelper.getBitmap(resultCode));
-    }
-
-    if (requestCode == GalleryHelper.PICK_IMAGE_REQUEST && resultCode == RESULT_OK) {
-      loadedImage.setImageBitmap(galleryHelper.getBitmap(resultCode, data));
-    }
-  }
 }

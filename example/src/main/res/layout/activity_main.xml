@@ -14,35 +14,82 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/target_language"
+        android:text="Source Language"
         android:textStyle="bold" />
 
-  <RadioGroup
-      android:id="@+id/target_language"
-      android:layout_width="match_parent"
-      android:layout_height="wrap_content"
-      android:orientation="horizontal">
+    <RadioGroup
+        android:id="@+id/source_language"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
 
-      <RadioButton
-          android:id="@+id/spanish"
-          android:layout_width="wrap_content"
-          android:layout_height="wrap_content"
-          android:text="@string/spanish"
-          android:checked="true" />
+        <RadioButton
+            android:id="@+id/english_source"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="English"
+            android:checked="true" />
 
-      <RadioButton
-          android:id="@+id/french"
-          android:layout_width="wrap_content"
-          android:layout_height="wrap_content"
-          android:text="@string/french" />
+        <RadioButton
+            android:id="@+id/spanish_source"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/spanish" />
 
-      <RadioButton
-          android:id="@+id/italian"
-          android:layout_width="wrap_content"
-          android:layout_height="wrap_content"
-          android:text="@string/italian" />
+        <RadioButton
+            android:id="@+id/french_source"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/french" />
 
-  </RadioGroup>
+        <RadioButton
+            android:id="@+id/italian_source"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/italian" />
+
+    </RadioGroup>
+
+    <TextView
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:text="@string/target_language"
+    android:textStyle="bold" />
+
+    <RadioGroup
+        android:id="@+id/target_language"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <RadioButton
+            android:id="@+id/english"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="English" />
+
+        <RadioButton
+            android:id="@+id/spanish"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/spanish"
+            android:checked="true" />
+
+        <RadioButton
+            android:id="@+id/french"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/french" />
+
+        <RadioButton
+            android:id="@+id/italian"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/italian" />
+
+    </RadioGroup>
+
+
 
   <LinearLayout
         android:layout_width="match_parent"
@@ -96,28 +143,11 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content" />
 
-  <LinearLayout
-      android:layout_width="match_parent"
-      android:layout_height="wrap_content"
-      android:orientation="horizontal"
-      >
-
-    <Button
-        android:id="@+id/gallery_button"
+    <TextView
+        android:id="@+id/tone"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Gallery"
-        />
+        android:layout_height="wrap_content" />
 
-    <Button
-        android:id="@+id/camera_button"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Camera"
-        />
-
-
-  </LinearLayout>
 
   <ImageView
         android:id="@+id/loaded_image"
